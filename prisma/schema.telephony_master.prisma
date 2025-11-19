@@ -1,0 +1,1010 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma/telephony_master"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL_TELEPHONY_MASTER")
+}
+
+model his_download {
+  id         String   @id @db.Uuid
+  category   String   @db.VarChar(100)
+  dt_added   DateTime @db.Timestamp(6)
+  is_active  Boolean?
+  name       String   @db.VarChar(100)
+  user_added String?  @db.VarChar(30)
+  status     String?  @db.VarChar(100)
+}
+
+model log_bucket_assignment {
+  log_id         String   @id @db.Uuid
+  api            String?  @db.VarChar(255)
+  date_execution DateTime @db.Timestamp(6)
+  id_executor    String?  @db.VarChar(255)
+  payload        Json?    @db.Json
+  failed_reason  String?
+  status         String   @default("Success") @db.VarChar(20)
+}
+
+model log_call_activity {
+  log_call_id     String    @id @db.Uuid
+  id_agent        String?   @db.VarChar(255)
+  call_detail     Json?     @db.Json
+  call_id         String?   @db.VarChar(255)
+  customer_detail Json?     @db.Json
+  data_id         String?   @db.Uuid
+  dt_added        DateTime  @db.Timestamp(6)
+  dt_time_call    DateTime? @db.Timestamp(6)
+  id_category     String?   @db.VarChar(255)
+}
+
+model log_call_activity_outbound {
+  log_call_id     String    @id @db.Uuid
+  call_detail     Json?     @db.Json
+  call_id         String?   @db.VarChar(255)
+  customer_detail Json?     @db.Json
+  data_id         String    @db.Uuid
+  dt_added        DateTime  @db.Timestamp(6)
+  dt_time_call    DateTime? @db.Timestamp(6)
+  id_agent        String?   @db.VarChar(255)
+  id_category     String?   @db.VarChar(255)
+}
+
+model log_call_bucket {
+  log_id          String           @id @db.Uuid
+  id_agent        String?          @db.VarChar(255)
+  call_cd_status  Int?
+  calldetail      Json?            @db.Json
+  dt_call_end     DateTime?        @db.Timestamp(6)
+  call_id         String?          @db.VarChar(255)
+  dt_call_start   DateTime?        @db.Timestamp(6)
+  id_category     String?          @db.VarChar(255)
+  id_customer     String?          @db.VarChar(255)
+  data_id         String?          @db.Uuid
+  call_detail     Json?            @db.Json
+  trn_call_bucket trn_call_bucket? @relation(fields: [data_id], references: [data_id], onDelete: NoAction, onUpdate: NoAction, map: "fk2ei4jkirnxaxfvoig0sfilv2s")
+}
+
+model log_user_mapping {
+  log_id         String    @id @db.Uuid
+  api            String?   @db.VarChar(100)
+  date_execution DateTime? @db.Timestamp(6)
+  id_file        String?   @db.VarChar(30)
+  payload        Json?     @db.Json
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model mst_answer {
+  file_id                String                  @db.Uuid
+  customer_detail        Json?                   @db.Json
+  id_category            String?                 @db.VarChar(30)
+  dt_added               DateTime                @default(now()) @db.Timestamp(6)
+  data_id                Int?                    @default(autoincrement())
+  mst_category_telephony mst_category_telephony? @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "fk9yb2b6weq8qsnv1opk9v6dh01")
+
+  @@ignore
+}
+
+model mst_api {
+  id_api            String              @id @db.Uuid
+  description       String?
+  doc_request       Boolean
+  dt_added          DateTime            @db.Timestamp(6)
+  dt_updated        DateTime?           @db.Timestamp(6)
+  endpoint          String
+  id_category       String              @db.VarChar(30)
+  information_name  String              @db.VarChar(100)
+  initial_body      Json                @db.Json
+  initial_header    Json                @db.Json
+  is_active         Boolean
+  method_api        String              @db.VarChar(50)
+  response_body     String              @db.VarChar(100)
+  user_added        String              @db.VarChar(50)
+  user_updated      String?             @db.VarChar(50)
+  mst_input_design  mst_input_design?
+  mst_output_design mst_output_design[]
+}
+
+model mst_app_status {
+  id_app_status          String                 @id @db.VarChar(30)
+  is_active              Boolean
+  dt_added               DateTime?              @db.Timestamp(6)
+  dt_update              DateTime?              @db.Timestamp(6)
+  status_name            String                 @db.VarChar(30)
+  user_added             String?                @db.VarChar(30)
+  user_update            String?                @db.VarChar(30)
+  id_category            String                 @db.VarChar(30)
+  mst_category_telephony mst_category_telephony @relation(fields: [id_category], references: [id_category], onDelete: NoAction, onUpdate: NoAction, map: "fkrcn7v5uupuifbdhqf07lhcwn6")
+}
+
+model mst_billing {
+  id_billing             String                  @id(map: "mst_billing_pk") @db.VarChar(30)
+  id_category            String?                 @db.VarChar(30)
+  target_type            Int?                    @db.SmallInt
+  cost                   Int?
+  dt_overdue             DateTime?               @db.Timestamp(6)
+  call_result_level      String?
+  call_result            String?
+  is_active              Boolean                 @default(true)
+  mst_category_telephony mst_category_telephony? @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "fkb73voslhygq9vtfqlh6orbj0y")
+  mst_target_billing     mst_target_billing?     @relation(fields: [target_type], references: [target_type], onDelete: NoAction, onUpdate: NoAction, map: "mst_billing_fk")
+}
+
+model mst_blacklist {
+  block_id               String                 @id @db.VarChar(30)
+  is_active              Boolean
+  dt_added               DateTime?              @db.Timestamp(6)
+  dt_update              DateTime?              @db.Timestamp(6)
+  notes                  String?
+  phone_number           String                 @db.VarChar(15)
+  user_added             String?                @db.VarChar(255)
+  user_updated           String?                @db.VarChar(255)
+  id_category            String                 @db.VarChar(30)
+  id_tenant              String                 @db.VarChar(255)
+  mst_category_telephony mst_category_telephony @relation(fields: [id_category], references: [id_category], onDelete: NoAction, onUpdate: NoAction, map: "fk5hpfhkt4vc29dt9g4224hcdt7")
+  mst_tenant             mst_tenant             @relation(fields: [id_tenant], references: [id_tenant], onDelete: NoAction, onUpdate: NoAction, map: "fk5t69b13c6i73rq47rdoonx1ni")
+}
+
+model mst_bucket_grouping {
+  id_tenant              String?                @db.VarChar(30)
+  id_category            String                 @db.VarChar(30)
+  id_bucket_grouping     String                 @id(map: "mst_bucket_grouping_pk") @db.VarChar(30)
+  grouping_name          String                 @db.VarChar(30)
+  id_recipient           String[]
+  cron                   String?                @db.VarChar(30)
+  is_active              Boolean                @default(true)
+  filter_parameter       Json?                  @db.Json
+  user_added             String?                @db.VarChar(30)
+  dt_added               DateTime               @default(now()) @db.Timestamp(6)
+  user_updated           String?                @db.VarChar(30)
+  dt_update              DateTime?              @db.Timestamp(6)
+  is_auto                Boolean?
+  role_access_level      Int?                   @db.SmallInt
+  data_assign            Int?                   @db.SmallInt
+  is_percentage          Boolean?
+  lead_id                String[]
+  round_robin            Boolean                @default(false)
+  id_flow                String?                @db.VarChar(30)
+  id_scheduler           String?                @db.Uuid
+  id_schedule            String                 @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  mst_category_telephony mst_category_telephony @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "mst_bucket_grouping_fk")
+  mst_flow               mst_flow?              @relation(fields: [id_flow], references: [id_flow], onDelete: Cascade, map: "mst_bucket_grouping_fk2")
+
+  @@unique([grouping_name, user_added], map: "uk3ukypisuiadelofa48pcejpqy")
+  @@index([id_category])
+  @@index([id_tenant])
+}
+
+model mst_call_result {
+  call_result_id         String                 @id(map: "mst_call_result_pk") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  call_cd_status         Int                    @default(autoincrement())
+  id_category            String                 @db.VarChar(30)
+  result_parent_name     String?                @db.VarChar(100)
+  result_name            String                 @db.VarChar(100)
+  result_level           Int                    @db.SmallInt
+  is_active              Boolean                @default(true)
+  user_added             String?                @db.VarChar(30)
+  dt_added               DateTime               @default(now()) @db.Timestamp(6)
+  user_updated           String?                @db.VarChar(30)
+  dt_update              DateTime?              @db.Timestamp(6)
+  question_check         Boolean                @default(false)
+  mst_category_telephony mst_category_telephony @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "fkped01ebpk1s40rlk5fi5ea93v")
+
+  @@unique([id_category, result_name], map: "mst_call_result_un")
+  @@index([result_parent_name], map: "mst_call_result_id_category_idx")
+  @@index([result_name], map: "mst_call_result_parent_name_idx")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model mst_callback_function {
+  id          Int
+  id_category String?  @db.VarChar(100)
+  function    String   @db.VarChar(100)
+  dt_added    DateTime @db.Timestamp(6)
+
+  @@ignore
+}
+
+model mst_category_telephony {
+  id_category                 String                        @id(map: "mst_category_telephony_pk") @db.VarChar(30)
+  category_name               String                        @db.VarChar(100)
+  id_tenant                   String                        @db.VarChar(255)
+  period_start                DateTime?                     @db.Timestamp(6)
+  period_end                  DateTime?                     @db.Timestamp(6)
+  service                     String                        @db.VarChar(30)
+  is_active                   Boolean                       @default(true)
+  user_added                  String?                       @db.VarChar(30)
+  dt_added                    DateTime                      @default(now()) @db.Timestamp(6)
+  user_updated                String?                       @db.VarChar(30)
+  dt_update                   DateTime?                     @db.Timestamp(6)
+  phone_priority              String[]
+  call_type                   String?                       @db.VarChar(100)
+  flag_submit                 Boolean?                      @default(false)
+  mst_answer                  mst_answer[]                  @ignore
+  mst_app_status              mst_app_status[]
+  mst_billing                 mst_billing[]
+  mst_blacklist               mst_blacklist[]
+  mst_bucket_grouping         mst_bucket_grouping[]
+  mst_call_result             mst_call_result[]
+  mst_tenant                  mst_tenant                    @relation(fields: [id_tenant], references: [id_tenant], onDelete: NoAction, onUpdate: NoAction, map: "mst_category_telephony_fk")
+  mst_flow                    mst_flow[]
+  mst_form_ticket             mst_form_ticket[]
+  mst_global                  mst_global[]                  @ignore
+  mst_grading                 mst_grading[]
+  mst_hot_leads_reason        mst_hot_leads_reason[]
+  mst_indikator               mst_indikator[]
+  mst_ivr_mapping             mst_ivr_mapping[]
+  mst_knowledge               mst_knowledge[]
+  mst_parameter               mst_parameter[]
+  mst_phone_reference         mst_phone_reference?
+  mst_question                mst_question[]                @ignore
+  mst_region                  mst_region[]
+  mst_type_lov                mst_type_lov[]
+  tbl_upload_answer_history   tbl_upload_answer_history[]
+  tbl_upload_customer_history tbl_upload_customer_history[] @ignore
+  trn_blacklist_bucket        trn_blacklist_bucket[]
+
+  @@unique([category_name, id_tenant], map: "mst_category_telephony_un")
+  @@index([id_tenant])
+  @@index([is_active])
+  @@index([service])
+}
+
+model mst_flow {
+  id_flow                String                  @id(map: "mst_flow_pk") @db.VarChar(30)
+  flow_start             Int?
+  flow_end               Int
+  is_active              Boolean                 @default(true)
+  user_added             String?                 @db.VarChar(30)
+  dt_added               DateTime                @default(now()) @db.Timestamp(6)
+  user_update            String?                 @db.VarChar(30)
+  dt_update              DateTime?               @db.Timestamp(6)
+  flow_name              String?                 @db.VarChar(100)
+  id_category            String?                 @db.VarChar(30)
+  user_updated           String?                 @db.VarChar(30)
+  mst_bucket_grouping    mst_bucket_grouping[]
+  mst_category_telephony mst_category_telephony? @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "mst_flow_fk")
+
+  @@unique([flow_name, id_category], map: "mst_flow_un")
+}
+
+model mst_form_ticket {
+  form_ticket_id         String                 @id @db.VarChar(30)
+  dt_added               DateTime               @db.Timestamp(6)
+  dt_update              DateTime?              @db.Timestamp(6)
+  is_active              Boolean?
+  user_added             String?                @db.VarChar(30)
+  user_update            String?                @db.VarChar(30)
+  name                   String                 @db.VarChar(30)
+  id_category            String                 @db.VarChar(30)
+  mst_category_telephony mst_category_telephony @relation(fields: [id_category], references: [id_category], onDelete: NoAction, onUpdate: NoAction, map: "fk8duo1qr510gw9y8adxahdkscr")
+  mst_ticket_layout      mst_ticket_layout[]
+}
+
+model mst_form_type {
+  form_type_id      String              @id @db.Uuid
+  dt_added          DateTime            @db.Timestamp(6)
+  dt_update         DateTime?           @db.Timestamp(6)
+  is_active         Boolean?
+  user_added        String?             @db.VarChar(30)
+  user_update       String?             @db.VarChar(30)
+  description       String?             @db.VarChar(100)
+  html_id           String              @db.VarChar(30)
+  html_tag          String              @db.VarChar(30)
+  input_type        String              @db.VarChar(30)
+  name              String              @db.VarChar(30)
+  mst_ticket_layout mst_ticket_layout[]
+}
+
+model mst_gcm {
+  id     Int     @id(map: "mst_gcm_pk") @default(autoincrement())
+  ref_id String  @db.VarChar(100)
+  col_1  Int?
+  col_2  Int?
+  col_3  String? @db.VarChar(255)
+  col_4  String? @db.VarChar(255)
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model mst_global {
+  id_global              String?                 @db.VarChar(30)
+  condition              String?                 @db.VarChar(100)
+  is_active              Boolean
+  user_added             String?                 @db.VarChar(30)
+  dt_added               DateTime                @db.Timestamp(6)
+  user_updated           String?                 @db.VarChar(30)
+  dt_update              DateTime?               @db.Timestamp(6)
+  condition_detail       Json?                   @db.Json
+  id_category            String?                 @db.VarChar(30)
+  mst_category_telephony mst_category_telephony? @relation(fields: [id_category], references: [id_category], onDelete: NoAction, onUpdate: NoAction, map: "fkbomytfnb9ee9hlcj5y593x4xy")
+
+  @@ignore
+}
+
+model mst_grading {
+  id_grading             String                  @id @db.VarChar(30)
+  dt_added               DateTime                @db.Timestamp(6)
+  dt_update              DateTime?               @db.Timestamp(6)
+  is_active              Boolean?
+  user_added             String?                 @db.VarChar(30)
+  user_update            String?                 @db.VarChar(30)
+  item_name              String?                 @db.VarChar(30)
+  score_max              Int?
+  score_min              Int?
+  sub_item_name          String?                 @db.VarChar(30)
+  id_category            String?                 @db.VarChar(30)
+  mst_category_telephony mst_category_telephony? @relation(fields: [id_category], references: [id_category], onDelete: NoAction, onUpdate: NoAction, map: "fk1i7cbrf7hh2itj6e27fr8rlwc")
+}
+
+model mst_hot_leads_reason {
+  id_reason              String                 @id @db.VarChar(30)
+  is_active              Boolean
+  dt_added               DateTime?              @db.Timestamp(6)
+  dt_update              DateTime?              @db.Timestamp(6)
+  reason_name            String                 @db.VarChar(200)
+  user_added             String?                @db.VarChar(30)
+  user_update            String?                @db.VarChar(30)
+  id_category            String                 @db.VarChar(30)
+  mst_category_telephony mst_category_telephony @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "fk2wtuqggaaomwkigr04upsdtxq")
+}
+
+model mst_indikator {
+  indikator_id           String                 @id @db.VarChar(30)
+  dt_added               DateTime               @default(now()) @db.Timestamp(6)
+  dt_update              DateTime?              @db.Timestamp(6)
+  is_active              Boolean?               @default(true)
+  user_added             String?                @db.VarChar(30)
+  user_update            String?                @db.VarChar(30)
+  indikator_name         String?                @db.VarChar(30)
+  id_category            String                 @db.VarChar(30)
+  mst_category_telephony mst_category_telephony @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "fkjygto9e6eonl4c3m9ergj46c8")
+  mst_sub_indikator      mst_sub_indikator[]
+}
+
+model mst_input_design {
+  id_input_design String    @id @db.Uuid
+  dt_added        DateTime  @db.Timestamp(6)
+  dt_updated      DateTime? @db.Timestamp(6)
+  field_name      Json      @db.Json
+  id_category     String    @db.VarChar(30)
+  is_mandatory    String
+  user_added      String    @db.VarChar(50)
+  user_updated    String?   @db.VarChar(50)
+  id_api          String    @unique(map: "uk_77d981k0m1n3lt35kd6oaosnw") @db.Uuid
+  mst_api         mst_api   @relation(fields: [id_api], references: [id_api], onDelete: NoAction, onUpdate: NoAction, map: "fks8oyvw2fjq9tcx0i0er7m8g9p")
+}
+
+model mst_ivr_mapping {
+  id_ivr                 String                 @id @db.Uuid
+  dt_added               DateTime?              @db.Timestamp(6)
+  dt_update              DateTime?              @db.Timestamp(6)
+  extension              Int
+  user_added             String?                @db.VarChar(30)
+  user_update            String?                @db.VarChar(30)
+  id_category            String                 @db.VarChar(30)
+  mst_category_telephony mst_category_telephony @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "fkejl7i6d9ibtrwl4yfu4rgjcha")
+}
+
+model mst_knowledge {
+  knowledge_id           String                  @id(map: "mst_knowledge_pk") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  knowledge_title        String?                 @db.VarChar(100)
+  id_category            String?                 @db.VarChar(30)
+  knowledge_content      String?
+  is_active              Boolean                 @default(true)
+  user_added             String?                 @db.VarChar(30)
+  user_updated           String?                 @db.VarChar(30)
+  dt_added               DateTime?               @db.Timestamp(6)
+  dt_update              DateTime?               @db.Timestamp(6)
+  user_update            String?                 @db.VarChar(30)
+  mst_category_telephony mst_category_telephony? @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "fkt7l21q33gp59w313iellr1xrl")
+}
+
+model mst_lov {
+  id_lov           String            @id @db.Uuid
+  dt_added         DateTime          @db.Timestamp(6)
+  dt_updated       DateTime?         @db.Timestamp(6)
+  lov_level        Int?
+  lov_name         String            @db.VarChar(100)
+  lov_parent_name  String?           @db.VarChar(100)
+  user_added       String?           @db.VarChar(30)
+  user_updated     String?           @db.VarChar(30)
+  id_sub_type      String?           @db.Uuid
+  lov_parent_id    String?           @db.Uuid
+  mst_lov          mst_lov?          @relation("mst_lovTomst_lov", fields: [lov_parent_id], references: [id_lov], onDelete: NoAction, onUpdate: NoAction, map: "fk63ue7kpyf23yheeish8kv1wf9")
+  other_mst_lov    mst_lov[]         @relation("mst_lovTomst_lov")
+  mst_sub_type_lov mst_sub_type_lov? @relation(fields: [id_sub_type], references: [id_sub_type], onDelete: NoAction, onUpdate: NoAction, map: "fkm0v1cj4al3w5wckere0ih4p9a")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model mst_mapping_source {
+  id_source_leads String?   @db.VarChar(36)
+  dt_added        DateTime  @default(now()) @db.Timestamp(6)
+  dt_update       DateTime? @db.Timestamp(6)
+  is_active       Boolean?
+  user_added      String?   @db.VarChar(30)
+  user_update     String?   @db.VarChar(30)
+  cd_source_from  String?   @db.VarChar(255)
+  id_category     String?   @db.VarChar(30)
+  id_product      String?   @db.VarChar(255)
+  id_tenant       String?   @db.VarChar(30)
+  source_name     String?   @db.VarChar(100)
+  dt_send         DateTime? @db.Timestamp(6)
+  api_callback    String?
+  is_send         Boolean?
+
+  @@ignore
+}
+
+model mst_output_design {
+  id_output_design String    @id @db.Uuid
+  dt_added         DateTime  @db.Timestamp(6)
+  dt_updated       DateTime? @db.Timestamp(6)
+  field_name       Json      @db.Json
+  id_category      String    @db.VarChar(30)
+  is_active        Boolean
+  section_name     String    @db.VarChar(100)
+  section_order    Int       @db.SmallInt
+  user_added       String    @db.VarChar(50)
+  user_updated     String?   @db.VarChar(50)
+  id_api           String    @db.Uuid
+  mst_api          mst_api   @relation(fields: [id_api], references: [id_api], onDelete: NoAction, onUpdate: NoAction, map: "fkd898lrpxeg0xm3dubq0rs5fvf")
+}
+
+model mst_param_agent_activity {
+  id            String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  dt_added      DateTime  @default(now()) @db.Timestamp(6)
+  dt_update     DateTime? @db.Timestamp(6)
+  is_active     Boolean?  @default(true)
+  user_added    String?   @default("system") @db.VarChar(30)
+  user_update   String?   @db.VarChar(30)
+  activity      String?   @db.VarChar(30)
+  activity_type String?   @db.VarChar(30)
+}
+
+model mst_parameter {
+  id_parameter           String                  @id(map: "mst_parameter_pk") @db.VarChar(30)
+  parameter_name         String?                 @db.VarChar(50)
+  id_category            String?                 @db.VarChar(30)
+  is_active              Boolean                 @default(true)
+  user_added             String?                 @db.VarChar(30)
+  dt_added               DateTime?               @default(now()) @db.Timestamp(6)
+  user_updated           String?                 @db.VarChar(30)
+  dt_update              DateTime?               @db.Timestamp(6)
+  used_agent             Boolean?
+  is_mandatory           Boolean?                @default(false)
+  ordering               Int?
+  mst_category_telephony mst_category_telephony? @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "mst_parameter_fk")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model mst_phone {
+  phone_id     String    @db.Uuid
+  phone_name   String?   @db.VarChar(100)
+  is_active    Boolean
+  user_added   String?   @db.VarChar(30)
+  dt_added     DateTime? @db.Timestamp(6)
+  user_updated String?   @db.VarChar(30)
+  dt_update    DateTime? @db.Timestamp(6)
+  user_update  String?   @db.VarChar(30)
+
+  @@ignore
+}
+
+model mst_phone_reference {
+  id_reference           String                 @id @db.Uuid
+  dt_added               DateTime               @db.Timestamp(6)
+  dt_update              DateTime?              @db.Timestamp(6)
+  is_active              Boolean?
+  user_added             String?                @db.VarChar(30)
+  user_update            String?                @db.VarChar(30)
+  api                    String
+  request                String                 @db.VarChar(255)
+  id_category            String                 @unique(map: "uk_4latwh4gdeih25psl3gt66mo") @db.VarChar(30)
+  mst_category_telephony mst_category_telephony @relation(fields: [id_category], references: [id_category], onDelete: NoAction, onUpdate: NoAction, map: "fkhj5710hpwb5bwcwllww1gqq3k")
+}
+
+model mst_product {
+  id_product      String           @id @db.Uuid
+  dt_added        DateTime         @db.Timestamp(6)
+  dt_update       DateTime?        @db.Timestamp(6)
+  is_active       Boolean?
+  user_added      String?          @db.VarChar(30)
+  user_update     String?          @db.VarChar(30)
+  cd_product      String?          @db.VarChar(50)
+  product_name    String?          @db.VarChar(100)
+  cd_source_from  String?          @db.VarChar(50)
+  mst_source_from mst_source_from? @relation(fields: [cd_source_from], references: [cd_source_from], onDelete: NoAction, onUpdate: NoAction, map: "fknvuljnknqgncgsyo99ooaesd3")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model mst_question {
+  id_question            String?                 @db.VarChar(30)
+  id_category            String?                 @db.VarChar(30)
+  question               String?
+  is_mandatory           Boolean
+  is_active              Boolean
+  user_added             String?                 @db.VarChar(30)
+  dt_added               DateTime?               @db.Timestamp(6)
+  user_updated           String?                 @db.VarChar(30)
+  dt_update              DateTime?               @db.Timestamp(6)
+  answer_type            String?                 @db.VarChar(50)
+  answer                 String?                 @db.VarChar(100)
+  option                 String?
+  id_source_leads        String?                 @db.VarChar(36)
+  no_field               String?                 @db.VarChar(10)
+  flag_pc                String?                 @db.VarChar(255)
+  ordering               Int?
+  mst_category_telephony mst_category_telephony? @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "fkk2jn456lvvgfjudixqdjgimsl")
+
+  @@ignore
+}
+
+model mst_region {
+  id_region              String                  @id @db.Uuid
+  area_name              String?                 @db.VarChar(100)
+  branch_name            String?                 @db.VarChar(100)
+  dt_added               DateTime?               @db.Timestamp(6)
+  dt_update              DateTime?               @db.Timestamp(6)
+  id_area                String?                 @db.VarChar(30)
+  id_branch              String?                 @db.VarChar(30)
+  is_active              Boolean
+  user_added             String?                 @db.VarChar(30)
+  user_update            String?                 @db.VarChar(30)
+  id_category            String?                 @db.VarChar(30)
+  mst_category_telephony mst_category_telephony? @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "fk8qlb76496kvmdesaqtiyn5re3")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model mst_shift {
+  shift_id    String    @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  shift_name  String    @db.VarChar(30)
+  shift_start DateTime? @db.Time(6)
+  shift_end   DateTime? @db.Time(6)
+  is_active   Boolean   @default(true)
+
+  @@ignore
+}
+
+model mst_source_from {
+  cd_source_from String        @id @db.VarChar(50)
+  dt_added       DateTime      @db.Timestamp(6)
+  dt_update      DateTime?     @db.Timestamp(6)
+  is_active      Boolean?
+  user_added     String?       @db.VarChar(30)
+  user_update    String?       @db.VarChar(30)
+  source_name    String?       @db.VarChar(100)
+  mst_product    mst_product[]
+}
+
+model mst_sub_indikator {
+  sub_indikator_id   String        @id @db.VarChar(30)
+  dt_added           DateTime      @default(now()) @db.Timestamp(6)
+  dt_update          DateTime?     @db.Timestamp(6)
+  is_active          Boolean?      @default(true)
+  user_added         String?       @db.VarChar(30)
+  user_update        String?       @db.VarChar(30)
+  bobot              Int?
+  skala_max          Int?
+  skala_min          Int?
+  sub_indikator_name String?       @db.VarChar(30)
+  indikator_id       String        @db.VarChar(30)
+  mst_indikator      mst_indikator @relation(fields: [indikator_id], references: [indikator_id], onDelete: NoAction, onUpdate: NoAction, map: "fk9894vwlbydgm2502o39ekrw47")
+}
+
+model mst_sub_type_lov {
+  id_sub_type   String        @id @db.Uuid
+  is_active     Boolean?
+  dt_added      DateTime?     @db.Timestamp(6)
+  dt_update     DateTime?     @db.Timestamp(6)
+  sub_type_name String?       @db.VarChar(30)
+  used_for      String        @db.VarChar(30)
+  user_added    String?       @db.VarChar(30)
+  user_updated  String?       @db.VarChar(30)
+  id_type_lov   String?       @db.VarChar(30)
+  mst_lov       mst_lov[]
+  mst_type_lov  mst_type_lov? @relation(fields: [id_type_lov], references: [id_type_lov], onDelete: NoAction, onUpdate: NoAction, map: "fk9r97soe5fssnhrkjuaivgi78e")
+}
+
+model mst_table {
+  id_table     String    @id @db.Uuid
+  is_active    Boolean
+  dt_added     DateTime  @db.Timestamp(6)
+  dt_update    DateTime? @db.Timestamp(6)
+  table_column String[]
+  table_name   String    @db.VarChar(30)
+  user_added   String?   @db.VarChar(30)
+  user_updated String?   @db.VarChar(30)
+}
+
+model mst_target {
+  id_target     String    @id @db.VarChar(30)
+  target_name   String?   @unique(map: "mst_target_un") @db.VarChar(100)
+  is_active     Boolean
+  user_added    String?   @db.VarChar(30)
+  dt_added      DateTime? @db.Timestamp(6)
+  user_update   String?   @db.VarChar(30)
+  dt_update     DateTime? @db.Timestamp(6)
+  target_detail Json?     @db.Json
+}
+
+model mst_target_billing {
+  target_type Int           @id(map: "mst_target_billing_pk") @db.SmallInt
+  target_name String?       @db.VarChar(50)
+  is_active   Boolean       @default(true)
+  mst_billing mst_billing[]
+}
+
+/// We could not retrieve columns for the underlying table. Either it has none or you are missing rights to see them. Please check your privileges.
+// model mst_telco {
+// }
+
+/// We could not retrieve columns for the underlying table. Either it has none or you are missing rights to see them. Please check your privileges.
+// model mst_telco_extension {
+// }
+
+/// We could not retrieve columns for the underlying table. Either it has none or you are missing rights to see them. Please check your privileges.
+// model mst_telco_setting {
+// }
+
+model mst_telephony_services {
+  id_service          String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  service_name        String?               @db.VarChar(30)
+  is_active           Boolean
+  user_added          String?               @db.VarChar(30)
+  dt_added            DateTime?             @db.Timestamp(6)
+  user_updated        String?               @db.VarChar(30)
+  dt_update           DateTime?             @db.Timestamp(6)
+  mst_tenant_services mst_tenant_services[]
+}
+
+model mst_tenant {
+  id_tenant                                                                                  String                    @id(map: "mst_tenant_pk") @db.VarChar(255)
+  tenant_name                                                                                String                    @unique(map: "mst_tenant_un") @db.VarChar(100)
+  is_active                                                                                  Boolean                   @default(true)
+  tenant_logo                                                                                String?
+  user_added                                                                                 String?                   @db.VarChar(30)
+  dt_added                                                                                   DateTime                  @default(now()) @db.Timestamp(6)
+  user_updated                                                                               String?                   @db.VarChar(30)
+  dt_update                                                                                  DateTime?                 @db.Timestamp(6)
+  api_callback                                                                               String?
+  mst_blacklist                                                                              mst_blacklist[]
+  mst_category_telephony                                                                     mst_category_telephony[]
+  mst_tenant_services                                                                        mst_tenant_services[]
+  mst_tenant_services_bak_mst_tenant_services_bak_mst_tenant_entity_id_tenantTomst_tenant    mst_tenant_services_bak[] @relation("mst_tenant_services_bak_mst_tenant_entity_id_tenantTomst_tenant") @ignore
+  mst_tenant_services_bak_mst_tenant_services_bak_master_tenant_entity_id_tenantTomst_tenant mst_tenant_services_bak[] @relation("mst_tenant_services_bak_master_tenant_entity_id_tenantTomst_tenant") @ignore
+  trn_blacklist_bucket                                                                       trn_blacklist_bucket[]
+
+  @@index([is_active])
+}
+
+model mst_tenant_services {
+  id_tenant_service      String                 @id @db.Uuid
+  id_tenant              String                 @db.VarChar(255)
+  id_service             String                 @db.Uuid
+  key                    String                 @db.VarChar(255)
+  dt_added               DateTime               @default(now()) @db.Timestamp(6)
+  mst_telephony_services mst_telephony_services @relation(fields: [id_service], references: [id_service], onDelete: NoAction, onUpdate: NoAction)
+  mst_tenant             mst_tenant             @relation(fields: [id_tenant], references: [id_tenant], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id_tenant, id_service], map: "mst_tenant_services_id_tenant_id_service_idx")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model mst_tenant_services_bak {
+  mst_tenant_entity_id_tenant                                                   String      @db.VarChar(30)
+  services_service_uuid                                                         String      @db.Uuid
+  master_tenant_entity_id_tenant                                                String      @db.VarChar(255)
+  services_id_service                                                           String      @db.Uuid
+  mst_tenant_mst_tenant_services_bak_mst_tenant_entity_id_tenantTomst_tenant    mst_tenant  @relation("mst_tenant_services_bak_mst_tenant_entity_id_tenantTomst_tenant", fields: [mst_tenant_entity_id_tenant], references: [id_tenant], onDelete: NoAction, onUpdate: NoAction, map: "fk6qeba2f8t9lnp3yc7l87tqnu4")
+  mst_tenant_mst_tenant_services_bak_master_tenant_entity_id_tenantTomst_tenant mst_tenant  @relation("mst_tenant_services_bak_master_tenant_entity_id_tenantTomst_tenant", fields: [master_tenant_entity_id_tenant], references: [id_tenant], onDelete: NoAction, onUpdate: NoAction, map: "fkl2d14xc5qs6uh8gw1c21xgvuo")
+  tbl_service                                                                   tbl_service @relation(fields: [services_service_uuid], references: [service_uuid], onDelete: NoAction, onUpdate: NoAction, map: "fkq232o5kbwcibx6x5eoviwbxw2")
+
+  @@ignore
+}
+
+model mst_ticket_layout {
+  layout_id       String          @id @db.Uuid
+  dt_added        DateTime        @db.Timestamp(6)
+  dt_update       DateTime?       @db.Timestamp(6)
+  is_active       Boolean?
+  user_added      String?         @db.VarChar(30)
+  user_update     String?         @db.VarChar(30)
+  body_question   Json?           @db.Json
+  is_required     Boolean
+  order_num       Int
+  title           String          @db.VarChar(30)
+  form_ticket_id  String          @db.VarChar(30)
+  form_type_id    String          @db.Uuid
+  mst_form_type   mst_form_type   @relation(fields: [form_type_id], references: [form_type_id], onDelete: NoAction, onUpdate: NoAction, map: "fk1gcb6schunla3nunickvbeo8k")
+  mst_form_ticket mst_form_ticket @relation(fields: [form_ticket_id], references: [form_ticket_id], onDelete: NoAction, onUpdate: NoAction, map: "fk2gy7md1qbt4lqqag3l10gc8rx")
+}
+
+model mst_type_lov {
+  id_type_lov            String                  @id @db.VarChar(30)
+  dt_added               DateTime?               @db.Timestamp(6)
+  dt_update              DateTime?               @db.Timestamp(6)
+  lov_type_name          String?                 @db.VarChar(30)
+  user_added             String?                 @db.VarChar(30)
+  user_updated           String?                 @db.VarChar(30)
+  id_category            String?                 @db.VarChar(30)
+  mst_sub_type_lov       mst_sub_type_lov[]
+  mst_category_telephony mst_category_telephony? @relation(fields: [id_category], references: [id_category], onDelete: NoAction, onUpdate: NoAction, map: "fkc8b7lk8p7x4vb7gf0o2bx058e")
+}
+
+model mst_user_mapping {
+  user_mapping_id  String    @id @db.Uuid
+  dt_added         DateTime  @db.Timestamp(6)
+  dt_update        DateTime? @db.Timestamp(6)
+  id_category      String?   @db.VarChar(255)
+  id_flow          String?   @db.VarChar(30)
+  id_target        String?   @db.VarChar(30)
+  id_tenant        String?   @db.VarChar(30)
+  id_user          String?   @db.VarChar(30)
+  is_active        Boolean?
+  user_added       String?   @db.VarChar(30)
+  user_update      String?   @db.VarChar(30)
+  allowed_transfer String?   @db.VarChar(255)
+}
+
+model mst_vehicle_brand {
+  brand_id     String    @id @db.Uuid
+  brand_name   String?   @db.VarChar(100)
+  cd_brand     String?   @db.VarChar(10)
+  dt_added     DateTime? @db.Timestamp(6)
+  dt_update    DateTime? @db.Timestamp(6)
+  is_active    Boolean
+  user_added   String?   @db.VarChar(30)
+  user_updated String?   @db.VarChar(30)
+}
+
+model mst_vehicle_model {
+  model_id     String    @id @db.Uuid
+  is_active    Boolean
+  cd_brand     String?   @db.VarChar(10)
+  cd_kind      String?   @db.VarChar(10)
+  cd_model     String?   @db.VarChar(10)
+  cd_type      String?   @db.VarChar(10)
+  dt_added     DateTime? @db.Timestamp(6)
+  dt_update    DateTime? @db.Timestamp(6)
+  model_name   String?   @db.VarChar(100)
+  user_added   String?   @db.VarChar(20)
+  user_updated String?   @db.VarChar(20)
+}
+
+model mst_vehicle_type {
+  type_id      String    @id @db.Uuid
+  cd_brand     String?   @db.VarChar(10)
+  cd_type      String?   @db.VarChar(10)
+  dt_added     DateTime? @db.Timestamp(6)
+  dt_update    DateTime? @db.Timestamp(6)
+  is_active    Boolean
+  type_name    String?   @db.VarChar(100)
+  user_added   String?   @db.VarChar(30)
+  user_updated String?   @db.VarChar(30)
+}
+
+model mst_wl_status {
+  status_id      String  @id @db.Uuid
+  call_cd_status Int?
+  id_category    String? @db.VarChar(30)
+}
+
+model tbl_master_tenant {
+  tenant_uuid                                                                                               String                       @id @db.Uuid
+  craeted_by                                                                                                DateTime?                    @db.Timestamp(6)
+  created_at                                                                                                DateTime                     @db.Timestamp(6)
+  is_active                                                                                                 Boolean
+  updated_at                                                                                                DateTime?                    @db.Timestamp(6)
+  updated_by                                                                                                DateTime?                    @db.Timestamp(6)
+  logo                                                                                                      String?                      @db.VarChar(255)
+  name                                                                                                      String?                      @db.VarChar(255)
+  password                                                                                                  String?                      @db.VarChar(255)
+  tenant_key                                                                                                String?                      @db.VarChar(255)
+  dt_added                                                                                                  DateTime                     @db.Timestamp(6)
+  dt_update                                                                                                 DateTime?                    @db.Timestamp(6)
+  user_added                                                                                                String?                      @db.VarChar(30)
+  user_update                                                                                               String?                      @db.VarChar(30)
+  tbl_master_tenant_services_tbl_master_tenant_services_master_tenant_entity_tenant_uuidTotbl_master_tenant tbl_master_tenant_services[] @relation("tbl_master_tenant_services_master_tenant_entity_tenant_uuidTotbl_master_tenant") @ignore
+  tbl_master_tenant_services_tbl_master_tenant_services_tenant_entity_tenant_uuidTotbl_master_tenant        tbl_master_tenant_services[] @relation("tbl_master_tenant_services_tenant_entity_tenant_uuidTotbl_master_tenant") @ignore
+  tbl_service_master_tenants                                                                                tbl_service_master_tenants[] @ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tbl_master_tenant_services {
+  master_tenant_entity_tenant_uuid                                                                 String            @db.Uuid
+  services_service_uuid                                                                            String            @db.Uuid
+  tenant_entity_tenant_uuid                                                                        String            @db.Uuid
+  tbl_master_tenant_tbl_master_tenant_services_master_tenant_entity_tenant_uuidTotbl_master_tenant tbl_master_tenant @relation("tbl_master_tenant_services_master_tenant_entity_tenant_uuidTotbl_master_tenant", fields: [master_tenant_entity_tenant_uuid], references: [tenant_uuid], onDelete: NoAction, onUpdate: NoAction, map: "fk385sbxjd5obwi1wt7n9clp3du")
+  tbl_master_tenant_tbl_master_tenant_services_tenant_entity_tenant_uuidTotbl_master_tenant        tbl_master_tenant @relation("tbl_master_tenant_services_tenant_entity_tenant_uuidTotbl_master_tenant", fields: [tenant_entity_tenant_uuid], references: [tenant_uuid], onDelete: NoAction, onUpdate: NoAction, map: "fkdr6694ylkcfynp804jwdyhp20")
+  tbl_service                                                                                      tbl_service       @relation(fields: [services_service_uuid], references: [service_uuid], onDelete: NoAction, onUpdate: NoAction, map: "fkhw9s9i7ifogh31dvq0w24kaap")
+
+  @@ignore
+}
+
+model tbl_service {
+  service_uuid               String                       @id @db.Uuid
+  name                       String?                      @db.VarChar(255)
+  mst_tenant_services_bak    mst_tenant_services_bak[]    @ignore
+  tbl_master_tenant_services tbl_master_tenant_services[] @ignore
+  tbl_service_master_tenants tbl_service_master_tenants[] @ignore
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tbl_service_master_tenants {
+  service_telemarketing_entity_service_uuid String            @db.Uuid
+  master_tenants_tenant_uuid                String            @db.Uuid
+  tbl_master_tenant                         tbl_master_tenant @relation(fields: [master_tenants_tenant_uuid], references: [tenant_uuid], onDelete: NoAction, onUpdate: NoAction, map: "fk2hbcr6suhqloy384ubr9qeov8")
+  tbl_service                               tbl_service       @relation(fields: [service_telemarketing_entity_service_uuid], references: [service_uuid], onDelete: NoAction, onUpdate: NoAction, map: "fk6g1ul3atmm32b42ed6t64exje")
+
+  @@ignore
+}
+
+model tbl_upload_answer_history {
+  file_id                String                 @id(map: "tbl_upload_answer_history_pk") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id_category            String                 @db.VarChar(30)
+  filename               String?
+  total_data             Int?
+  status_data            String?                @default("Checking Data") @db.VarChar(30)
+  failed_reason          String?
+  is_active              Boolean                @default(true)
+  user_added             String?                @db.VarChar(30)
+  dt_added               DateTime               @default(now()) @db.Timestamp(6)
+  notes                  String?
+  mst_category_telephony mst_category_telephony @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "fkhh961ip527wv66ebqapgjuye3")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model tbl_upload_customer_history {
+  id_file                String                 @db.VarChar(30)
+  id_category            String                 @db.VarChar(30)
+  start_date             DateTime?              @db.Timestamp(6)
+  end_date               DateTime?              @db.Timestamp(6)
+  filename               String?
+  total_data             Int?
+  status_data            String?                @default("Checking Data") @db.VarChar(30)
+  failed_reason          String?
+  is_active              Boolean                @default(true)
+  user_added             String?                @db.VarChar(30)
+  dt_added               DateTime               @default(now()) @db.Timestamp(6)
+  notes                  String?
+  mst_category_telephony mst_category_telephony @relation(fields: [id_category], references: [id_category], onDelete: Cascade, map: "fkoe05k9s6v2ew9lnsnkdg2ee06")
+
+  @@ignore
+}
+
+model test_call_tbl {
+  call_uuid String    @id @db.Uuid
+  createdat DateTime  @db.Timestamp(6)
+  createdby DateTime? @db.Timestamp(6)
+  isactive  Boolean
+  updatedat DateTime? @db.Timestamp(6)
+  updatedby DateTime? @db.Timestamp(6)
+  name      String?   @db.VarChar(255)
+}
+
+model trn_agent_activity {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_user        String    @db.VarChar(255)
+  agent_activity Json      @db.Json
+  report_time    DateTime  @db.Timestamp(6)
+  id_category    String    @db.VarChar(255)
+  dt_added       DateTime  @default(now()) @db.Timestamp(6)
+  dt_updated     DateTime? @db.Timestamp(6)
+}
+
+model trn_blacklist_bucket {
+  data_id                String                 @id @db.Uuid
+  is_active              Boolean
+  customer_detail        Json?                  @db.Json
+  dt_added               DateTime?              @db.Timestamp(6)
+  dt_update              DateTime?              @db.Timestamp(6)
+  flag_digital           Boolean?
+  id_file                String?                @db.VarChar(255)
+  phone_number           Json?                  @db.Json
+  source                 String?                @db.VarChar(30)
+  source_leads           String?                @db.VarChar(30)
+  user_added             String?                @db.VarChar(255)
+  user_updated           String?                @db.VarChar(255)
+  id_category            String                 @db.VarChar(30)
+  id_tenant              String                 @db.VarChar(255)
+  mst_tenant             mst_tenant             @relation(fields: [id_tenant], references: [id_tenant], onDelete: NoAction, onUpdate: NoAction, map: "fki7q8h79kiuba22jwgrm667ly4")
+  mst_category_telephony mst_category_telephony @relation(fields: [id_category], references: [id_category], onDelete: NoAction, onUpdate: NoAction, map: "fkten8f26kdwlj4343k2is6qgv7")
+}
+
+model trn_bucket_inbound {
+  data_id              String              @id @db.Uuid
+  is_active            Boolean?
+  agent_assigned       String?             @db.VarChar(50)
+  call_cd_status       String?             @db.VarChar(50)
+  call_detail          Json?               @db.Json
+  call_id              String?             @db.VarChar(50)
+  coordinator_assigned String?             @db.VarChar(50)
+  dt_added             DateTime            @db.Timestamp(6)
+  dt_appointment       DateTime?           @db.Timestamp(6)
+  dt_update            DateTime?           @db.Timestamp(6)
+  exclude_status       String?             @db.VarChar(10)
+  id_category          String?             @db.VarChar(50)
+  notes                String?
+  phone_number         String              @db.VarChar(50)
+  tl_assigned          String?             @db.VarChar(50)
+  transfer             String?             @db.VarChar(100)
+  transfered_from      String?             @db.VarChar(100)
+  user_added           String?             @db.VarChar(30)
+  user_updated         String?             @db.VarChar(30)
+  trn_ticket_bucket    trn_ticket_bucket[]
+}
+
+model trn_call_bucket {
+  data_id              String            @id @db.Uuid
+  is_active            Boolean?
+  agent_assigned       String?           @db.VarChar(30)
+  app_status           String?           @db.VarChar(50)
+  call_attempt         Int?              @db.SmallInt
+  call_cd_status       Int?
+  coordinator_assigned String?           @db.VarChar(30)
+  customer_detail      Json?             @db.Json
+  dt_added             DateTime          @db.Timestamp(6)
+  dt_app_status_update DateTime?         @db.Timestamp(6)
+  dt_appointment       DateTime?         @db.Timestamp(6)
+  dt_updated           DateTime?         @db.Timestamp(6)
+  end_date             DateTime?         @db.Timestamp(6)
+  exclude_status       String?           @db.VarChar(255)
+  id_category          String            @db.VarChar(255)
+  id_file              String?           @db.VarChar(30)
+  phone_number         Json?             @db.Json
+  priority             Int?              @db.SmallInt
+  start_date           DateTime?         @db.Timestamp(6)
+  tl_assigned          String?           @db.VarChar(30)
+  total_call           Int?              @db.SmallInt
+  user_added           String?           @db.VarChar(30)
+  user_updated         String?           @db.VarChar(30)
+  dt_update            DateTime?         @db.Timestamp(6)
+  round_robin          Boolean?
+  transfer             String?           @db.VarChar(100)
+  dt_assign_tl         DateTime?         @db.Timestamp(6)
+  dt_first_call        DateTime?         @db.Timestamp(6)
+  log_call_bucket      log_call_bucket[]
+}
+
+model trn_file_upload {
+  file_id      String    @id @db.Uuid
+  dt_added     DateTime  @db.Timestamp(6)
+  dt_updated   DateTime? @db.Timestamp(6)
+  file_name    String    @db.VarChar(255)
+  file_path    String
+  file_size    BigInt
+  file_type    String    @db.VarChar(50)
+  status       String?   @db.VarChar(50)
+  ticket_id    String    @db.VarChar(30)
+  user_added   String    @db.VarChar(50)
+  user_updated String?   @db.VarChar(50)
+}
+
+model trn_ticket_bucket {
+  ticket_id          String             @id @db.VarChar(30)
+  is_active          Boolean?
+  answer             Json?              @db.Json
+  dt_added           DateTime           @db.Timestamp(6)
+  dt_updated         DateTime?          @db.Timestamp(6)
+  form_ticket_id     String             @db.VarChar(30)
+  id_agent_closed    String?            @db.VarChar(30)
+  id_agent_handling  String?            @db.VarChar(30)
+  id_agent_receiving String             @db.VarChar(30)
+  id_category        String             @db.VarChar(30)
+  status_ticket      String?            @db.VarChar(30)
+  user_added         String?            @db.VarChar(30)
+  user_updated       String?            @db.VarChar(30)
+  data_id            String             @db.Uuid
+  trn_bucket_inbound trn_bucket_inbound @relation(fields: [data_id], references: [data_id], onDelete: NoAction, onUpdate: NoAction, map: "fkhjirdw248hodv5uf9xusb8l9")
+}
+
+model trn_user_filter {
+  filter_id String    @id @db.Uuid
+  dt_added  DateTime? @db.Timestamp(6)
+  dt_update DateTime? @db.Timestamp(6)
+  filter    Json?     @db.Json
+  id_user   String    @db.VarChar(255)
+  menu_id   String    @db.Uuid
+}

@@ -1,20 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
 import { DatabaseManager } from "@/lib/database-manager";
-import bcrypt from "bcryptjs";
 
-interface HierarchicalData {
-	tenantId: string;
-	service: string;
-	categoryId: string;
-	koordinatorId: string;
-	tlId: string;
-	agentId: string;
-}
-
-/**
- * Get hierarchical data based on user role and mapping using reverse lookup logic
- */
-async function getHierarchicalData(userId: string): Promise<HierarchicalData> {
+// Copy the getHierarchicalData function logic here for direct testing
+async function getHierarchicalData(userId: string) {
 	const accountDb = DatabaseManager.getTelephonyAccountClient();
 	const masterDb = DatabaseManager.getTelephonyMasterClient();
 
@@ -78,25 +65,13 @@ async function getHierarchicalData(userId: string): Promise<HierarchicalData> {
 		tenantId = userMapping.id_tenant;
 	}
 
-	// Get user's role with access level
-	let userAccessLevel = 0;
-	if (user.id_role) {
-		const userRole = await accountDb.mst_role.findFirst({
-			where: { id_role: user.id_role },
-			select: { access_level: true },
-		});
-		userAccessLevel = userRole?.access_level || 0;
-	}
+	// Determine hierarchical structure based on role using reverse lookup
+	const role = user.id_role?.toLowerCase() || "";
 
-	console.log(`[DEBUG] User access level: ${userAccessLevel}`);
-
-	// Determine hierarchical structure based on access level using reverse lookup
-	if (userAccessLevel === 4) {
-		// Agent (access_level = 4): TENANT_ID - SERVICE - CATEGORY_ID - KOORDINATOR_ID - TL_ID - AGENT_ID
+	if (role.includes("agent")) {
+		// Agent: TENANT_ID - SERVICE - CATEGORY_ID - KOORDINATOR_ID - TL_ID - AGENT_ID
 		agentId = user.id_user;
-		console.log(
-			`[DEBUG] Agent role detected (access_level=4). Agent ID: ${agentId}`,
-		);
+		console.log(`[DEBUG] Agent role detected. Agent ID: ${agentId}`);
 
 		// Get supervisor (TL) information
 		if (user.spv_id) {
@@ -141,12 +116,10 @@ async function getHierarchicalData(userId: string): Promise<HierarchicalData> {
 		} else {
 			console.log(`[DEBUG] Agent has no spv_id`);
 		}
-	} else if (userAccessLevel === 3) {
-		// Team Leader (access_level = 3): TENANT_ID - SERVICE - CATEGORY_ID - KOORDINATOR_ID - TL_ID - 0
+	} else if (role.includes("team") || role.includes("leader")) {
+		// Team Leader: TENANT_ID - SERVICE - CATEGORY_ID - KOORDINATOR_ID - TL_ID - 0
 		tlId = user.id_user;
-		console.log(
-			`[DEBUG] Team Leader role detected (access_level=3). TL ID: ${tlId}`,
-		);
+		console.log(`[DEBUG] Team Leader role detected. TL ID: ${tlId}`);
 
 		// Get coordinator from supervisor
 		if (user.spv_id) {
@@ -167,16 +140,16 @@ async function getHierarchicalData(userId: string): Promise<HierarchicalData> {
 		} else {
 			console.log(`[DEBUG] Team Leader has no spv_id`);
 		}
-	} else if (userAccessLevel === 2) {
-		// Koordinator (access_level = 2): TENANT_ID - SERVICE - CATEGORY_ID - KOORDINATOR_ID - 0 - 0
+	} else if (role.includes("koordinator") || role.includes("coordinator")) {
+		// Koordinator: TENANT_ID - SERVICE - CATEGORY_ID - KOORDINATOR_ID - 0 - 0
 		koordinatorId = user.id_user;
 		console.log(
-			`[DEBUG] Coordinator role detected (access_level=2). Coordinator ID: ${koordinatorId}`,
+			`[DEBUG] Coordinator role detected. Coordinator ID: ${koordinatorId}`,
 		);
 	} else {
 		// Default/Other roles: Use basic structure with placeholders
 		// For other roles, we still populate the user's own position
-		if (userAccessLevel <= 2) {
+		if (role.includes("supervisor") || role.includes("manager")) {
 			koordinatorId = user.id_user;
 		} else {
 			// For unknown roles, use the user's ID in the appropriate position
@@ -203,85 +176,21 @@ async function getHierarchicalData(userId: string): Promise<HierarchicalData> {
 	};
 }
 
-/**
- * Format hierarchical data into the required string format
- */
-function formatHierarchy(data: HierarchicalData): string {
-	return `${data.tenantId} - ${data.service} - ${data.categoryId} - ${data.koordinatorId} - ${data.tlId} - ${data.agentId}`;
-}
+async function testHierarchyDirect() {
+	console.log("=== TESTING HIERARCHY FUNCTION DIRECTLY ===");
 
-export async function POST(req: NextRequest) {
+	const agentId = "INT1758789178444";
+
 	try {
-		const { password, nip, email } = await req.json();
-
-		if (!nip && !email) {
-			return NextResponse.json(
-				{ status: "F", message: "NIP atau Email wajib diisi" },
-				{ status: 400 },
-			);
-		}
-
-		if (!password) {
-			return NextResponse.json(
-				{ status: "F", message: "Password wajib diisi" },
-				{ status: 400 },
-			);
-		}
-
-		const accountDb = DatabaseManager.getTelephonyAccountClient();
-		const user = await accountDb.mst_users.findFirst({
-			where: nip ? { nip } : { email },
-			select: {
-				id_user: true,
-				nip: true,
-				email: true,
-				password: true,
-				id_role: true,
-			},
-		});
-
-		if (!user) {
-			return NextResponse.json(
-				{ status: "F", message: "User tidak ditemukan" },
-				{ status: 404 },
-			);
-		}
-
-		if (!user.password) {
-			return NextResponse.json(
-				{ status: "F", message: "User tidak memiliki password terdaftar" },
-				{ status: 400 },
-			);
-		}
-
-		const isMatch = await bcrypt.compare(password, user.password);
-
-		if (!isMatch) {
-			return NextResponse.json(
-				{ status: "F", message: "Password salah!" },
-				{ status: 417 },
-			);
-		}
-
-		// Get hierarchical data for successful login
-		const hierarchicalData = await getHierarchicalData(user.id_user);
-		const hierarchy = formatHierarchy(hierarchicalData);
-
-		return NextResponse.json(
-			{
-				status: "T",
-				message: "Berhasil",
-				ID: user.id_user,
-				Role: user.id_role,
-				hierarchical_data: hierarchy,
-			},
-			{ status: 200 },
+		const result = await getHierarchicalData(agentId);
+		console.log("Hierarchical data result:", result);
+		console.log(
+			"Formatted:",
+			`${result.tenantId} - ${result.service} - ${result.categoryId} - ${result.koordinatorId} - ${result.tlId} - ${result.agentId}`,
 		);
 	} catch (error) {
-		console.error(error);
-		return NextResponse.json(
-			{ status: "F", message: "Internal server error" },
-			{ status: 500 },
-		);
+		console.error("Error:", error);
 	}
 }
+
+testHierarchyDirect().catch(console.error);
