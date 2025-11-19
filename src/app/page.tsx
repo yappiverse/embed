@@ -1,65 +1,166 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
+
+interface LoginFormData {
+	identifier: string;
+	password: string;
+}
+
+interface ApiResponse {
+	status: "T" | "F";
+	message: string;
+}
+
+export default function LoginPage() {
+	const [formData, setFormData] = useState<LoginFormData>({
+		identifier: "",
+		password: "",
+	});
+	const [message, setMessage] = useState<{
+		type: "success" | "error";
+		text: string;
+	} | null>(null);
+
+	const [loading, setLoading] = useState(false);
+	const [showPassword, setShowPassword] = useState(false);
+
+	const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+		setFormData({ ...formData, [e.target.name]: e.target.value });
+		setMessage(null);
+	};
+
+	const validate = () => {
+		if (!formData.identifier.trim()) {
+			setMessage({ type: "error", text: "Masukkan NPK atau Email Anda" });
+			return false;
+		}
+		if (!formData.password.trim()) {
+			setMessage({ type: "error", text: "Password wajib diisi" });
+			return false;
+		}
+		return true;
+	};
+
+	const handleSubmit = async (e: React.FormEvent) => {
+		e.preventDefault();
+		if (!validate()) return;
+
+		setLoading(true);
+		setMessage(null);
+
+		try {
+			const isNumeric = /^\d+$/.test(formData.identifier);
+
+			const requestBody = isNumeric
+				? { nip: formData.identifier, password: formData.password }
+				: { email: formData.identifier, password: formData.password };
+
+			const res = await fetch("/api/password-validation", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(requestBody),
+			});
+
+			const data: ApiResponse = await res.json();
+
+			if (data.status === "T") {
+				setMessage({ type: "success", text: data.message });
+			} else {
+				setMessage({ type: "error", text: data.message });
+			}
+		} catch {
+			setMessage({
+				type: "error",
+				text: "Terjadi kesalahan saat menghubungi server.",
+			});
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	return (
+		<div className='flex min-h-screen items-center justify-center bg-[#F4F5FA]'>
+			<div className='flex flex-col p-16 rounded-lg bg-white shadow-sm'>
+				<form
+					className='bg-white w-[295px] items-center rounded-lg'
+					onSubmit={handleSubmit}>
+					{/* Title */}
+					<div className='mb-8'>
+						<h1 className='text-lg font-bold text-black'>Masuk</h1>
+					</div>
+
+					{/* Message */}
+					{message && (
+						<div
+							className={`p-3 mb-4 rounded-lg text-sm ${
+								message.type === "success"
+									? "bg-green-100 text-green-700 border border-green-300"
+									: "bg-red-100 text-red-700 border border-red-300"
+							}`}>
+							{message.text}
+						</div>
+					)}
+
+					{/* Username */}
+					<div>
+						<p className='text-[#757575] text-lg'>Username</p>
+						<div className='flex items-center relative'>
+							<input
+								name='identifier'
+								placeholder='Masukkan NPK atau Email Anda'
+								value={formData.identifier}
+								onChange={handleInput}
+								className='w-full py-2 px-3 border rounded-lg outline-none focus:border-teksPrimary/60 disabled:bg-gray-200 disabled:text-gray-400 text-[#000000] border-gray-300'
+							/>
+						</div>
+					</div>
+
+					{/* Password */}
+					<div className='mt-3'>
+						<p className='text-[#757575] text-lg'>Password</p>
+						<div className='flex items-center relative'>
+							<input
+								type={showPassword ? "text" : "password"}
+								name='password'
+								placeholder='Password'
+								value={formData.password}
+								onChange={handleInput}
+								className='w-full py-2 px-3 border rounded-lg outline-none focus:border-teksPrimary/60 disabled:bg-gray-200 disabled:text-gray-400 text-[#000000] border-gray-300'
+							/>
+
+							<button
+								type='button'
+								onClick={() => setShowPassword(!showPassword)}
+								className='absolute right-2 cursor-pointer bottom-[0.45rem]'>
+								{showPassword ? (
+									<EyeOff size={20} className='text-gray-600' />
+								) : (
+									<Eye size={20} className='text-gray-600' />
+								)}
+							</button>
+						</div>
+					</div>
+
+					{/* Submit */}
+					<div className='flex flex-col items-center mt-8 justify-center'>
+						<button
+							type='submit'
+							disabled={loading}
+							className='btn hover:bg-hoverPrimary btn-primary flex w-full h-12 text-white font-bold py-2 px-10 border-2 border-white focus:outline-none rounded-lg items-center justify-center bg-[#1F3273]'
+							style={{ textTransform: "none", fontSize: "18px" }}>
+							{loading ? "Memproses..." : "Masuk"}
+						</button>
+
+						<a
+							href='/forgotpass'
+							className='text-[#22356F] hover:underline mt-4 text-lg'>
+							Lupa password?
+						</a>
+					</div>
+				</form>
+			</div>
+		</div>
+	);
 }
