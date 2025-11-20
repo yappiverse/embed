@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json();
 		const { username, level } = body;
-
+		console.log("body:", body);
 		if (!username || level === undefined || level === null) {
 			return NextResponse.json(
 				{ error: "username and level are required" },

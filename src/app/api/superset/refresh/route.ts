@@ -3,16 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 const supersetUrl = process.env.SUPERSET_URL!;
 const supersetApiUrl = `${supersetUrl}/api/v1/security`;
 
-/**
- * POST /api/v1/security/refresh
- * Refresh Superset access token using refresh token
- */
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const { refresh_token } = body;
 
-        // Validate refresh token presence
         if (!refresh_token) {
             return NextResponse.json(
                 { error: "refresh_token is required" },
@@ -20,7 +15,6 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Call Superset refresh endpoint
         const refreshRes = await fetch(`${supersetApiUrl}/refresh`, {
             method: "POST",
             headers: {
@@ -33,7 +27,6 @@ export async function POST(req: NextRequest) {
         });
 
         if (!refreshRes.ok) {
-            // Handle different error cases
             if (refreshRes.status === 401) {
                 return NextResponse.json(
                     { error: "Invalid or expired refresh token" },
@@ -50,7 +43,6 @@ export async function POST(req: NextRequest) {
 
         const refreshData = await refreshRes.json();
 
-        // Extract the new access token from response
         const accessToken = refreshData.access_token;
 
         if (!accessToken) {

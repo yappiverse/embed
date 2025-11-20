@@ -41,7 +41,6 @@ export const useAuthStore = create<AuthState>()(
 			_isRehydrated: false,
 
 			setSupersetCredentials: (token, dashboardId, fullName) => {
-				console.log("Setting Superset credentials:", { token, dashboardId, fullName });
 				set({
 					guestToken: token,
 					dashboardId,
@@ -50,7 +49,6 @@ export const useAuthStore = create<AuthState>()(
 			},
 
 			setUserCredentials: (userId, userRole, accessLevel, hierarchicalData) => {
-				console.log("Setting user credentials:", { userId, userRole, accessLevel, hierarchicalData });
 				set({
 					userId,
 					userRole,
@@ -60,7 +58,6 @@ export const useAuthStore = create<AuthState>()(
 			},
 
 			clearAuth: () => {
-				console.log("Clearing auth credentials");
 				set({
 					guestToken: null,
 					dashboardId: null,
@@ -73,20 +70,16 @@ export const useAuthStore = create<AuthState>()(
 			},
 
 			_setRehydrated: (status: boolean) => {
-				console.log("Setting rehydration status:", status);
 				set({ _isRehydrated: status });
 			},
 		}),
 		{
 			name: "auth-storage",
 			onRehydrateStorage: () => {
-				console.log("Auth store rehydration started");
 				return (state, error) => {
 					if (error) {
-						console.error("Auth store rehydration error:", error);
 						state?._setRehydrated(true);
 					} else {
-						console.log("Auth store rehydration completed:", state);
 						state?._setRehydrated(true);
 					}
 				};
