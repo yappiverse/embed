@@ -13,10 +13,15 @@ interface HierarchicalData {
 	accessLevel: number;
 }
 
+/** ============================
+ *  getHierarchicalData - Optimized
+ *  EARLY STOP for AccessLevel = 4
+ * ============================ */
 async function getHierarchicalData(userId: string): Promise<HierarchicalData> {
 	const accountDb = DatabaseManager.getTelephonyAccountClient();
 	const masterDb = DatabaseManager.getTelephonyMasterClient();
 
+	// Fetch base user
 	const user = await accountDb.mst_users.findFirst({
 		where: { id_user: userId },
 		select: {
@@ -29,21 +34,40 @@ async function getHierarchicalData(userId: string): Promise<HierarchicalData> {
 	});
 
 	if (!user) throw new Error("User not found");
+	if (!user.full_name) throw new Error("User full_name is null");
 
-	const [mapping, role] = await Promise.all([
-		accountDb.mst_user_mapping.findFirst({
-			where: { id_user: userId, is_active: true },
-			select: { id_category: true, id_tenant: true },
-		}),
-		user.id_role
-			? accountDb.mst_role.findFirst({
-					where: { id_role: user.id_role },
-					select: { access_level: true, role_name: true },
-			  })
-			: Promise.resolve(null),
-	]);
+	// Fetch ROLE FIRST (needed for early stop)
+	const role = user.id_role
+		? await accountDb.mst_role.findFirst({
+				where: { id_role: user.id_role },
+				select: { access_level: true, role_name: true },
+		  })
+		: null;
 
-	/** 3️⃣ Category fetch (only if needed) */
+	const accessLevel = role?.access_level ?? 0;
+
+	if (accessLevel === 4) {
+		return {
+			fullName: user.full_name,
+			tenantId: "0",
+			service: "0",
+			categoryId: "0",
+			koordinatorId: "0",
+			tlId: "0",
+			agentId: user.id_user,
+			accessLevel,
+		};
+	}
+
+	// ===============================
+	// BELOW: Only runs for NON-Agent
+	// ===============================
+
+	const mapping = await accountDb.mst_user_mapping.findFirst({
+		where: { id_user: userId, is_active: true },
+		select: { id_category: true, id_tenant: true },
+	});
+
 	let category = null;
 
 	if (mapping?.id_category) {
@@ -54,61 +78,26 @@ async function getHierarchicalData(userId: string): Promise<HierarchicalData> {
 	}
 
 	let supervisor1: { id_user: string; spv_id: string | null } | null = null;
-	let supervisor2: { id_user: string; spv_id: string | null } | null = null;
+	// let supervisor2: { id_user: string; spv_id: string | null } | null = null;
 
 	if (user.spv_id) {
-		const spvs = await accountDb.mst_users.findMany({
-			where: {
-				id_user: {
-					in: [user.spv_id],
-				},
-			},
+		supervisor1 = await accountDb.mst_users.findFirst({
+			where: { id_user: user.spv_id },
 			select: { id_user: true, spv_id: true },
 		});
-
-		supervisor1 = spvs[0] ?? null;
-
-		if (supervisor1?.spv_id) {
-			const [spv2] = await accountDb.mst_users.findMany({
-				where: { id_user: supervisor1.spv_id },
-				select: { id_user: true, spv_id: true },
-			});
-			supervisor2 = spv2 ?? null;
-		}
-	}
-	if (!user.full_name) {
-		throw new Error("User full_name is null");
 	}
 
-	const fullName = user.full_name;
-
-	let tenantId =
+	const tenantId =
 		mapping?.id_tenant ?? category?.id_tenant ?? user.id_tenant ?? "0";
 
-	let service = category?.service ?? "0";
+	const service = category?.service ?? "0";
 	const categoryId = category?.id_category ?? "0";
 
-	const accessLevel = role?.access_level ?? 0;
-	const roleName = (role?.role_name ?? "").toLowerCase();
-
-	if (!mapping) {
-		if (roleName.includes("admin") || user.id_role === "ROLE001") {
-			tenantId = "ALL";
-			service = "ALL";
-		}
-	}
-
-	let agentId = "0";
+	const agentId = "0";
 	let tlId = "0";
 	let koordinatorId = "0";
 
 	switch (accessLevel) {
-		case 4:
-			agentId = user.id_user;
-			tlId = supervisor1?.id_user ?? "0";
-			koordinatorId = supervisor2?.id_user ?? "0";
-			break;
-
 		case 3:
 			tlId = user.id_user;
 			koordinatorId = supervisor1?.id_user ?? "0";
@@ -118,19 +107,12 @@ async function getHierarchicalData(userId: string): Promise<HierarchicalData> {
 			koordinatorId = user.id_user;
 			break;
 
-		case 0:
-			agentId = "0";
-			tlId = "0";
-			koordinatorId = "0";
-			break;
-
 		default:
-			agentId = user.id_user;
 			break;
 	}
 
 	return {
-		fullName,
+		fullName: user.full_name,
 		tenantId,
 		service,
 		categoryId,
@@ -145,6 +127,9 @@ function formatHierarchy(data: HierarchicalData): string {
 	return `${data.fullName} - ${data.tenantId} - ${data.service} - ${data.categoryId} - ${data.koordinatorId} - ${data.tlId} - ${data.agentId}`;
 }
 
+/** ============================
+ *      POST /api/login
+ * ============================ */
 export async function POST(req: NextRequest) {
 	try {
 		const { password, nip, email } = await req.json();
@@ -196,6 +181,21 @@ export async function POST(req: NextRequest) {
 			);
 
 		const hierarchicalData = await getHierarchicalData(user.id_user);
+
+		if (hierarchicalData.accessLevel === 4) {
+			return NextResponse.json(
+				{
+					status: "T",
+					message: "Success",
+					ID: user.id_user,
+					Fullname: user.full_name,
+					Role: user.id_role,
+					AccessLevel: hierarchicalData.accessLevel,
+				},
+				{ status: 200 },
+			);
+		}
+
 		const hierarchy = formatHierarchy(hierarchicalData);
 
 		return NextResponse.json(

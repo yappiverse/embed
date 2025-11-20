@@ -19,12 +19,14 @@
 	},
 	"dependencies": {
 		"@prisma/client": "^6.19.0",
+		"@superset-ui/embedded-sdk": "^0.2.0",
 		"bcryptjs": "^3.0.3",
 		"lucide-react": "^0.554.0",
 		"next": "16.0.3",
 		"prisma": "^6.19.0",
 		"react": "19.2.0",
-		"react-dom": "19.2.0"
+		"react-dom": "19.2.0",
+		"zustand": "^5.0.8"
 	},
 	"devDependencies": {
 		"@tailwindcss/postcss": "^4",
