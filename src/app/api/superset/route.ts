@@ -12,16 +12,19 @@ function mergeCookies(...cookieHeaders: (string | null)[]) {
 		.join("; ");
 }
 
-export async function GET(req: NextRequest) {
+export async function POST(req: NextRequest) {
 	try {
-		const username = req.nextUrl.searchParams.get("username");
-		const level = req.nextUrl.searchParams.get("level");
-		if (!username || !level) {
+		const body = await req.json();
+		const { username, level } = body;
+
+		// Fixed validation: level 0 is a valid value, only check for undefined/null
+		if (!username || level === undefined || level === null) {
 			return NextResponse.json(
 				{ error: "username and level are required" },
 				{ status: 400 },
 			);
 		}
+
 
 		const dashboards: Record<string, string> = {
 			"0": process.env.SUPERSET_DASHBOARD_ID_ADMIN!,
@@ -32,9 +35,8 @@ export async function GET(req: NextRequest) {
 			"5": process.env.SUPERSET_DASHBOARD_ID_TENANT!,
 		};
 
-		const dashboardId = dashboards[level] ?? dashboards["0"];
+		const dashboardId = dashboards[String(level)] ?? dashboards["0"];
 
-		console.log("SELECTED DASHBOARD:", dashboardId);
 
 		const loginRes = await fetch(`${supersetApiUrl}/login`, {
 			method: "POST",
@@ -49,6 +51,7 @@ export async function GET(req: NextRequest) {
 				refresh: true,
 			}),
 		});
+
 
 		const loginCookies = loginRes.headers.get("set-cookie");
 		const loginData = await loginRes.json();
