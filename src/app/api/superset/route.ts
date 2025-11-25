@@ -3,8 +3,6 @@ import { NextRequest, NextResponse } from "next/server";
 const supersetUrl = process.env.SUPERSET_URL!;
 const supersetApiUrl = `${supersetUrl}/api/v1/security`;
 
-const refreshTokenStore = new Map<string, string>();
-
 function mergeCookies(...cookieHeaders: (string | null)[]) {
 	return cookieHeaders
 		.filter(Boolean)
@@ -14,43 +12,7 @@ function mergeCookies(...cookieHeaders: (string | null)[]) {
 		.join("; ");
 }
 
-async function refreshAccessToken(refreshToken: string): Promise<string> {
-	try {
-		const refreshRes = await fetch(`${supersetApiUrl}/refresh`, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Referer: `${supersetUrl}/`,
-			},
-			body: JSON.stringify({
-				refresh_token: refreshToken,
-			}),
-		});
-
-		if (!refreshRes.ok) {
-			throw new Error(`Token refresh failed: ${refreshRes.status}`);
-		}
-
-		const refreshData = await refreshRes.json();
-		return refreshData.access_token;
-	} catch (error) {
-		console.error("Token refresh error:", error);
-		throw error;
-	}
-}
-
-async function getValidAccessToken(): Promise<{ accessToken: string; refreshToken: string }> {
-	const storedRefreshToken = refreshTokenStore.get("superset_admin");
-
-	if (storedRefreshToken) {
-		try {
-			const newAccessToken = await refreshAccessToken(storedRefreshToken);
-			return { accessToken: newAccessToken, refreshToken: storedRefreshToken };
-		} catch (error) {
-			console.log("Refresh token expired or invalid, performing fresh login", error);
-		}
-	}
-
+async function getAccessToken(): Promise<string> {
 	const loginRes = await fetch(`${supersetApiUrl}/login`, {
 		method: "POST",
 		headers: {
@@ -61,7 +23,7 @@ async function getValidAccessToken(): Promise<{ accessToken: string; refreshToke
 			username: process.env.SUPERSET_USERNAME!,
 			password: process.env.SUPERSET_PASSWORD!,
 			provider: "db",
-			refresh: true,
+			refresh: false,
 		}),
 	});
 
@@ -71,17 +33,12 @@ async function getValidAccessToken(): Promise<{ accessToken: string; refreshToke
 
 	const loginData = await loginRes.json();
 	const accessToken = loginData.access_token;
-	const refreshToken = loginData.refresh_token;
 
 	if (!accessToken) {
 		throw new Error("No access token received from Superset");
 	}
 
-	if (refreshToken) {
-		refreshTokenStore.set("superset_admin", refreshToken);
-	}
-
-	return { accessToken, refreshToken: refreshToken || "" };
+	return accessToken;
 }
 
 export async function POST(req: NextRequest) {
@@ -96,21 +53,22 @@ export async function POST(req: NextRequest) {
 			);
 		}
 
-
 		const dashboards: Record<string, string> = {
 			"0": process.env.SUPERSET_DASHBOARD_ID_ADMIN!,
 			"1": process.env.SUPERSET_DASHBOARD_ID_ADMIN!,
-			"2": process.env.SUPERSET_DASHBOARD_ID_KOOR!,
-			"3": process.env.SUPERSET_DASHBOARD_ID_TL!,
+			// "2": process.env.SUPERSET_DASHBOARD_ID_KOOR!,
+			// "3": process.env.SUPERSET_DASHBOARD_ID_TL!,
+			"2": process.env.SUPERSET_DASHBOARD_ID_TENANT!,
+			"3": process.env.SUPERSET_DASHBOARD_ID_TENANT!,
 			"4": process.env.SUPERSET_DASHBOARD_ID_AGENT!,
 			"5": process.env.SUPERSET_DASHBOARD_ID_TENANT!,
 		};
 
 		const dashboardId = dashboards[String(level)] ?? dashboards["0"];
 
+		const accessToken = await getAccessToken();
 
-		const { accessToken } = await getValidAccessToken();
-
+		// Get login cookies by performing a fresh login
 		const loginRes = await fetch(`${supersetApiUrl}/login`, {
 			method: "POST",
 			headers: {
@@ -121,7 +79,7 @@ export async function POST(req: NextRequest) {
 				username: process.env.SUPERSET_USERNAME!,
 				password: process.env.SUPERSET_PASSWORD!,
 				provider: "db",
-				refresh: true,
+				refresh: false,
 			}),
 		});
 
@@ -182,4 +140,3 @@ export async function POST(req: NextRequest) {
 		);
 	}
 }
-
